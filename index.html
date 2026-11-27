@@ -1,0 +1,452 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>オールラウンダー計画</title>
+<meta name="theme-color" content="#151924">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="計画">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" href="icon-192.png">
+<style>
+/* Layout: one narrow training-log column, tab bar on top, rows like a gym logbook. System fonts only so it works offline. */
+:root{
+  --bg:#f1f2f6; --surface:#ffffff; --sunk:#e8eaf1; --ink:#151924; --muted:#5b6274; --line:#d9dce6;
+  --accent:#2347d6; --accent-ink:#ffffff; --accent-soft:#e3e8ff;
+  --good:#1d7f47; --good-soft:#dcf1e4; --warn:#9a6410; --warn-soft:#f8ead2; --bad:#b93a26; --bad-soft:#f8e0da;
+  --f-body:"Hiragino Sans","Hiragino Kaku Gothic ProN","Noto Sans JP","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --f-num:ui-monospace,"SF Mono","Roboto Mono",Menlo,Consolas,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#0e1117; --surface:#161a22; --sunk:#1d222c; --ink:#e7e9f0; --muted:#9aa1b3; --line:#2a303c;
+  --accent:#7b93ff; --accent-ink:#0e1117; --accent-soft:#1f2747;
+  --good:#53c58a; --good-soft:#15301f; --warn:#e3aa50; --warn-soft:#33270f; --bad:#f0806b; --bad-soft:#3a1c16; color-scheme:dark}}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.6}
+.wrap{max-width:760px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-top:calc(16px + env(safe-area-inset-top,0px));padding-bottom:calc(64px + env(safe-area-inset-bottom,0px));display:flex;flex-direction:column;gap:18px}
+header.top h1{font-weight:800;font-size:1.5rem;letter-spacing:.02em;margin:0}
+header.top p{margin:2px 0 0;color:var(--muted);font-size:.82rem}
+nav.tabs{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);display:grid;grid-template-columns:repeat(5,1fr);gap:4px;padding-block:6px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+nav.tabs button{font:inherit;font-weight:700;font-size:.85rem;padding:8px 2px;border:0;border-radius:8px;background:transparent;color:var(--muted);cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+button:focus-visible,input:focus-visible,textarea:focus-visible,label:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+main{display:flex;flex-direction:column;gap:18px}
+h2{font-weight:800;font-size:1.05rem;margin:0}
+.eyebrow{font-size:.72rem;letter-spacing:.12em;color:var(--muted);font-weight:700}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+[hidden]{display:none!important}
+.datebar{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.datebar .d{font-weight:800;font-size:1.25rem;text-align:center}
+.datebar button{font:inherit;border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;cursor:pointer}
+.datebar button:disabled{opacity:.35;cursor:default}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.stat{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;gap:2px;min-width:0}
+.stat .v{font-family:var(--f-num);font-size:1.3rem;font-weight:600}
+.stat .l{font-size:.74rem;color:var(--muted)}
+.alert{background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:10px 14px;font-size:.9rem;font-weight:500}
+.notice{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:10px 14px;font-size:.88rem;font-weight:500;display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.group{display:flex;flex-direction:column;gap:8px}
+.habit{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.habit.done{border-color:var(--good)} .habit.min{border-color:var(--warn)} .habit.flag{box-shadow:inset 3px 0 0 var(--bad)}
+.habit .name{font-weight:700;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap;min-width:0}
+.habit .wk{font-family:var(--f-num);font-size:.78rem;color:var(--muted);font-weight:500}
+.habit .meta{grid-column:1/-1;font-size:.8rem;color:var(--muted);display:flex;flex-direction:column;gap:1px;min-width:0}
+.habit .meta b{color:var(--ink);font-weight:500}
+.seg{display:flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{font:inherit;font-size:.8rem;font-weight:700;border:0;background:var(--surface);color:var(--muted);padding:8px 10px;cursor:pointer;min-width:44px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on-full{background:var(--good);color:var(--surface)} .seg button.on-min{background:var(--warn);color:var(--surface)}
+textarea,input[type=number]{font:inherit;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.note{display:flex;flex-direction:column;gap:6px}
+.note textarea{width:100%;min-height:64px;padding:10px 12px;resize:vertical;font-size:16px}
+details.rules{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.88rem}
+details.rules summary{cursor:pointer;font-weight:700}
+details.rules ol{margin:8px 0 2px;padding-left:1.3em;display:flex;flex-direction:column;gap:4px}
+.gridwrap{overflow-x:auto;background:var(--surface);border:1px solid var(--line);border-radius:10px}
+table.week{border-collapse:collapse;width:100%;font-size:.82rem;min-width:460px}
+table.week th,table.week td{padding:7px 6px;border-bottom:1px solid var(--line);text-align:center}
+table.week th:first-child,table.week td:first-child{text-align:left;padding-left:12px;white-space:nowrap}
+table.week thead th{font-weight:700;color:var(--muted);font-size:.75rem}
+table.week thead th.today{color:var(--accent)}
+.cell{display:inline-block;width:18px;height:18px;border-radius:5px;background:var(--sunk);vertical-align:middle}
+.cell.f{background:var(--good)} .cell.m{background:var(--warn)} .cell.na{background:transparent;border:1px dashed var(--line)}
+.legend{display:flex;gap:14px;font-size:.78rem;color:var(--muted);flex-wrap:wrap}
+.legend span{display:flex;align-items:center;gap:5px}
+.bars{display:flex;gap:6px;align-items:flex-end;height:120px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 12px 8px}
+.bars .b{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;height:100%;justify-content:flex-end;min-width:0}
+.bars .b i{display:block;width:100%;max-width:44px;background:var(--accent);border-radius:5px 5px 2px 2px}
+.bars .b i.cur{background:var(--ink)}
+.bars .b em{font-style:normal;font-size:.7rem;color:var(--muted);font-family:var(--f-num)}
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.goal .row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.goal .gname{font-weight:700}
+.pill{font-size:.72rem;font-weight:700;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.pill.ok{background:var(--good-soft);color:var(--good)} .pill.late{background:var(--bad-soft);color:var(--bad)} .pill.done{background:var(--accent-soft);color:var(--accent)} .pill.wait{background:var(--sunk);color:var(--muted)}
+.track{position:relative;height:10px;background:var(--sunk);border-radius:999px}
+.track .fill{position:absolute;inset:0 auto 0 0;background:var(--accent);border-radius:999px}
+.track .pace{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--ink);opacity:.55}
+.goal .sub{font-size:.8rem;color:var(--muted);display:flex;gap:12px;flex-wrap:wrap}
+.goal form{display:flex;gap:6px}
+.goal input{width:120px;padding:6px 10px;font-size:16px}
+.btn{font:inherit;font-size:.88rem;font-weight:700;border:0;border-radius:8px;background:var(--accent);color:var(--accent-ink);padding:9px 16px;cursor:pointer;text-align:center}
+.btn.ghost{background:transparent;color:var(--accent);border:1px solid var(--accent)}
+.btn.danger{background:var(--bad);color:var(--surface)}
+.btn:disabled{opacity:.5;cursor:default}
+.ms{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px}
+.ms input{width:22px;height:22px;accent-color:var(--good);flex:none}
+.ms label{flex:1;min-width:0;cursor:pointer}
+.ms .due{font-family:var(--f-num);font-size:.78rem;color:var(--muted);white-space:nowrap}
+.ms .due.over{color:var(--bad);font-weight:600}
+.ms.isdone label{color:var(--muted);text-decoration:line-through}
+.empty{background:var(--surface);border:1px dashed var(--line);border-radius:10px;padding:18px;color:var(--muted);font-size:.9rem}
+.toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;align-self:flex-start}
+.toggle button{font:inherit;font-size:.85rem;font-weight:700;border:0;background:var(--surface);color:var(--muted);padding:6px 14px;cursor:pointer}
+.toggle button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.toggle button+button{border-left:1px solid var(--line)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px}
+.hrow{display:grid;grid-template-columns:1fr auto auto;gap:10px;align-items:center;padding:9px 14px;border-bottom:1px solid var(--line);font-size:.88rem}
+.hrow:last-child{border-bottom:0}
+.hrow .n{min-width:0}
+.hrow .c{font-family:var(--f-num);font-variant-numeric:tabular-nums;font-size:.8rem;color:var(--muted);white-space:nowrap}
+.wdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:12px}
+.wdays .w{display:flex;flex-direction:column;align-items:center;gap:4px;min-width:0}
+.wdays .bar{width:100%;max-width:34px;height:70px;background:var(--sunk);border-radius:5px;position:relative;overflow:hidden}
+.wdays .bar i{position:absolute;left:0;right:0;bottom:0;background:var(--accent)}
+.wdays .bar i.low{background:var(--bad)}
+.wdays em{font-style:normal;font-size:.72rem;color:var(--muted);font-family:var(--f-num)}
+.tips{display:flex;flex-direction:column;gap:8px;margin:0;padding:0;list-style:none}
+.tips li{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:.9rem;display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.tips .k{font-size:.7rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap;margin-top:2px}
+.k.fix{background:var(--bad-soft);color:var(--bad)} .k.tune{background:var(--warn-soft);color:var(--warn)} .k.keep{background:var(--good-soft);color:var(--good)}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.card p{margin:0;font-size:.88rem;color:var(--muted)}
+.card .acts{display:flex;gap:8px;flex-wrap:wrap}
+.card textarea{width:100%;min-height:90px;padding:10px 12px;font-family:var(--f-num);font-size:13px}
+.filebtn{position:relative;overflow:hidden;display:inline-block}
+.filebtn input{position:absolute;inset:0;opacity:0;cursor:pointer;font-size:0}
+.msg{font-size:.85rem;font-weight:500}
+.msg.ok{color:var(--good)} .msg.err{color:var(--bad)}
+@media (max-width:440px){.stat .v{font-size:1.1rem}.seg button{padding:8px 8px;min-width:40px}nav.tabs button{font-size:.8rem}}
+@media (prefers-reduced-motion:no-preference){.track .fill{transition:width .4s ease}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>オールラウンダー計画</h1>
+    <p>やる気に関係なく、決めたきっかけで、最低ラインだけでも毎日やる。</p>
+  </header>
+  <nav class="tabs" role="tablist" id="tabs">
+    <button role="tab" data-tab="today" aria-selected="true">今日</button>
+    <button role="tab" data-tab="week" aria-selected="false">今週</button>
+    <button role="tab" data-tab="goals" aria-selected="false">目標</button>
+    <button role="tab" data-tab="review" aria-selected="false">振り返り</button>
+    <button role="tab" data-tab="settings" aria-selected="false">設定</button>
+  </nav>
+  <main id="view"></main>
+</div>
+
+<script>
+(function(){
+"use strict";
+const KEY="allrounder-v1";
+const CAT={work:"勉強・仕事",look:"容姿",life:"趣味・充実"};
+const CAT_ORDER=["work","look","life"];
+const WD=["日","月","火","水","木","金","土"];
+const WDM=["月","火","水","木","金","土","日"];
+
+/* ---------- dates ---------- */
+function ymd(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function parse(s){const p=s.split("-").map(Number);return new Date(p[0],p[1]-1,p[2]);}
+function addDays(s,n){const d=parse(s);d.setDate(d.getDate()+n);return ymd(d);}
+function weekStart(s){const d=parse(s);d.setDate(d.getDate()-((d.getDay()+6)%7));return ymd(d);}
+function label(s){const d=parse(s);return (d.getMonth()+1)+"/"+d.getDate()+"（"+WD[d.getDay()]+"）";}
+function esc(t){return String(t==null?"":t).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+let TODAY=ymd(new Date());
+
+/* ---------- storage (this phone only) ---------- */
+let store=null, storageOk=true;
+function load(){try{const s=JSON.parse(localStorage.getItem(KEY));return s&&Array.isArray(s.habits)?s:null;}catch(e){storageOk=false;return null;}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(store));storageOk=true;}catch(e){storageOk=false;}}
+function askPersist(){try{if(navigator.storage&&navigator.storage.persist)navigator.storage.persist();}catch(e){}}
+store=load();
+
+const ui={tab:"today",date:TODAY,revOff:0,pending:null,msg:"",msgType:"",confirmWipe:false};
+
+/* ---------- helpers ---------- */
+function active(h,date){return (!h.from||date>=h.from)&&(!h.until||date<=h.until);}
+function check(date,id){const d=store.days[date];return d&&d.checks?(d.checks[id]||0):0;}
+function firstDay(){const ks=Object.keys(store.days).sort();return ks[0]||TODAY;}
+function weekCount(h,date){const ws=weekStart(date);let c=0;for(let i=0;i<7;i++){const d=addDays(ws,i);if(d>TODAY)break;if(check(d,h.id)>0)c++;}return c;}
+function weekScore(ws){let got=0,need=0;for(const h of store.habits){if(!active(h,ws)&&!active(h,addDays(ws,6)))continue;let c=0;for(let i=0;i<7;i++){if(check(addDays(ws,i),h.id)>0)c++;}need+=h.perWeek;got+=Math.min(c,h.perWeek);}return need?Math.round(got/need*100):0;}
+function daysLeft(){return Math.max(0,Math.round((parse("2027-12-31")-parse(TODAY))/864e5));}
+function goalCalc(g){const span=g.target-g.start;const prog=span?Math.min(1,Math.max(0,(g.current-g.start)/span)):0;const t0=parse(g.startDate||"2026-11-20"),t1=parse(g.deadline);const exp=Math.min(1,Math.max(0,(parse(TODAY)-t0)/(t1-t0)));return {prog,exp};}
+function goalStatus(g){
+  if(g.kind==="pass"){if(g.done)return ["done","達成"];if(TODAY>g.deadline)return ["late","期限切れ"];return ["wait","未達成"];}
+  const c=goalCalc(g);if(c.prog>=1)return ["done","達成"];return c.prog+0.03>=c.exp?["ok","ペース通り"]:["late","ペースより遅れ"];
+}
+function backupAge(){const b=store&&store.meta&&store.meta.lastBackup;if(!b)return null;return Math.round((parse(TODAY)-parse(b.slice(0,10)))/864e5);}
+
+/* ---------- writes ---------- */
+function setCheck(id,v){const d=store.days[ui.date]||{checks:{},note:""};d.checks=Object.assign({},d.checks);d.checks[id]=v;store.days[ui.date]=d;save();render();}
+function setNote(t){const d=store.days[ui.date]||{checks:{},note:""};if(d.note===t)return;d.note=t;store.days[ui.date]=d;save();}
+
+/* ---------- views ---------- */
+const view=document.getElementById("view");
+function render(){
+  TODAY=ymd(new Date());
+  const tabs=document.getElementById("tabs");
+  tabs.hidden=!store;
+  tabs.querySelectorAll("button").forEach(b=>b.setAttribute("aria-selected",String(b.dataset.tab===ui.tab)));
+  if(!store){view.innerHTML=renderWelcome();return;}
+  view.innerHTML=({today:renderToday,week:renderWeek,goals:renderGoals,review:renderReview,settings:renderSettings}[ui.tab])();
+}
+
+function importCard(title,lead){
+  return '<div class="card"><h2>'+title+'</h2><p>'+lead+'</p>'+
+    '<div class="acts"><span class="btn filebtn">ファイルを選ぶ<input type="file" id="import-file" accept=".json,application/json,text/plain" aria-label="計画ファイルかバックアップを選ぶ"></span></div>'+
+    '<p>ファイルを選べない場合は、中身をコピーしてここに貼り付けます。</p><textarea id="import-text" placeholder="{ &quot;habits&quot;: [ ... ] }"></textarea>'+
+    '<div class="acts"><button class="btn ghost" data-act="import-text">貼り付けた内容を読み込む</button></div>'+
+    (ui.pending?'<div class="notice"><span>'+esc(ui.pending.summary)+'</span><span class="acts"><button class="btn danger" data-act="import-confirm">上書きする</button><button class="btn ghost" data-act="import-cancel">やめる</button></span></div>':'')+
+    (ui.msg?'<div class="msg '+ui.msgType+'">'+esc(ui.msg)+'</div>':'')+'</div>';
+}
+function renderWelcome(){
+  let h=importCard("はじめに：計画ファイルを読み込む","最初に1回だけ、計画ファイル（my-plan.json）を読み込みます。習慣・目標・期限つきのやることが入ります。記録はこのスマホの中だけに保存され、インターネットには送られません。");
+  if(!storageOk) h='<div class="alert">このブラウザでは保存ができません。プライベートブラウズを使っている場合は、通常のモードで開いてください。</div>'+h;
+  return h;
+}
+
+function renderToday(){
+  const date=ui.date, hs=store.habits.filter(h=>active(h,date));
+  if(!hs.length) return '<div class="empty">この日に表示する習慣がありません。</div>';
+  const daily=hs.filter(h=>h.perWeek>=7), doneToday=daily.filter(h=>check(date,h.id)>0).length;
+  const yest=addDays(date,-1);
+  const missed=daily.filter(h=>active(h,yest)&&yest>=firstDay()&&check(yest,h.id)===0&&check(date,h.id)===0&&Object.keys(store.days).length>0);
+  let html='<div class="datebar"><button data-act="prev" '+(date<=addDays(TODAY,-7)?"disabled":"")+'>‹ 前日</button><span class="d">'+label(date)+(date===TODAY?"":'<br><span class="eyebrow">記録の修正</span>')+'</span><button data-act="next" '+(date>=TODAY?"disabled":"")+'>翌日 ›</button></div>';
+  const age=backupAge();
+  if(age===null||age>=7) html+='<div class="notice"><span>'+(age===null?"まだ一度もバックアップしていません。":"最後のバックアップから"+age+"日たちました。")+'機種変更やデータ削除に備えて、週1回は書き出してください。</span><button class="btn" data-act="export">今すぐ書き出す</button></div>';
+  if(!storageOk) html+='<div class="alert">保存に失敗しています。プライベートブラウズでないか確認してください。</div>';
+  html+='<div class="stats"><div class="stat"><span class="v num">'+doneToday+'/'+daily.length+'</span><span class="l">今日の毎日習慣</span></div><div class="stat"><span class="v num">'+weekScore(weekStart(date))+'%</span><span class="l">今週の達成率</span></div><div class="stat"><span class="v num">'+daysLeft()+'</span><span class="l">2027年末まで（日）</span></div></div>';
+  if(missed.length) html+='<div class="alert"><b>2日連続で落とさない：</b>'+missed.map(h=>esc(h.name)).join("、")+' は昨日できていません。今日は最低ラインだけでもやる。</div>';
+  for(const c of CAT_ORDER){
+    const list=hs.filter(h=>h.cat===c);if(!list.length)continue;
+    html+='<section class="group"><span class="eyebrow">'+CAT[c]+'</span>';
+    for(const h of list){
+      const v=check(date,h.id), isDaily=h.perWeek>=7, flag=missed.includes(h);
+      html+='<div class="habit'+(v===2?" done":v===1?" min":"")+(flag?" flag":"")+'"><div class="name">'+esc(h.name)+(isDaily?'':'<span class="wk">今週 '+weekCount(h,date)+'/'+h.perWeek+'</span>')+'</div>'+
+        '<div class="seg" role="group" aria-label="'+esc(h.name)+'の記録"><button data-act="set" data-id="'+esc(h.id)+'" data-v="2" class="'+(v===2?"on-full":"")+'">完了</button><button data-act="set" data-id="'+esc(h.id)+'" data-v="1" class="'+(v===1?"on-min":"")+'">最低</button><button data-act="set" data-id="'+esc(h.id)+'" data-v="0" aria-label="未実施に戻す">－</button></div>'+
+        '<div class="meta">'+(h.trigger?'<span>きっかけ：<b>'+esc(h.trigger)+'</b></span>':'')+'<span>完了＝'+esc(h.full)+'／最低＝'+esc(h.min)+'</span></div></div>';
+    }
+    html+='</section>';
+  }
+  const note=(store.days[date]&&store.days[date].note)||"";
+  html+='<div class="note"><label class="eyebrow" for="day-note">今日のひとこと（体調・うまくいかなかった理由など）</label><textarea id="day-note" placeholder="例：寝不足で筋トレは最低ラインだけ。明日は23時に寝る">'+esc(note)+'</textarea></div>';
+  html+='<details class="rules"><summary>このアプリのルール</summary><ol><li>やる気は待たない。<b>きっかけ</b>が来たら考えずに始める。</li><li>無理な日は<b>最低ライン</b>でいい。ゼロにしないことが一番大事。</li><li><b>2日連続で落とさない</b>。1日の失敗は気にしない。</li><li>週の回数目標は、週末までに帳尻を合わせればいい。</li><li>週末に「振り返り」タブを開く。調整案は記録から自動で出る。</li></ol></details>';
+  return html;
+}
+
+function renderWeek(){
+  const ws=weekStart(ui.date), hs=store.habits.filter(h=>active(h,ws)||active(h,addDays(ws,6)));
+  let html='<h2>'+label(ws)+' 〜 '+label(addDays(ws,6))+'</h2><div class="gridwrap"><table class="week"><thead><tr><th>習慣</th>';
+  for(let i=0;i<7;i++){const d=addDays(ws,i);html+='<th class="'+(d===TODAY?"today":"")+'">'+WD[parse(d).getDay()]+'</th>';}
+  html+='<th>回数</th></tr></thead><tbody>';
+  for(const c of CAT_ORDER){for(const h of hs.filter(x=>x.cat===c)){
+    let cnt=0;html+='<tr><td>'+esc(h.name)+'</td>';
+    for(let i=0;i<7;i++){const d=addDays(ws,i),v=check(d,h.id);if(v>0)cnt++;html+='<td><span class="cell '+(!active(h,d)?"na":v===2?"f":v===1?"m":"")+'"></span></td>';}
+    html+='<td class="num">'+cnt+'/'+h.perWeek+'</td></tr>';
+  }}
+  html+='</tbody></table></div><div class="legend"><span><i class="cell f"></i>完了</span><span><i class="cell m"></i>最低ライン</span><span><i class="cell"></i>未実施</span></div>';
+  html+='<h2>週ごとの達成率</h2><div class="bars">';
+  for(let k=4;k>=0;k--){const w=addDays(weekStart(TODAY),-7*k),s=weekScore(w);html+='<div class="b"><em class="num">'+s+'%</em><i class="'+(k===0?"cur":"")+'" style="height:'+Math.max(2,s*0.75)+'px"></i><em>'+label(w).replace(/（.）/,"")+'〜</em></div>';}
+  return html+'</div>';
+}
+
+function renderGoals(){
+  let html='';
+  for(const c of CAT_ORDER){
+    const list=store.goals.filter(g=>g.cat===c).sort((a,b)=>a.deadline<b.deadline?-1:1);if(!list.length)continue;
+    html+='<section class="group"><span class="eyebrow">'+CAT[c]+'</span>';
+    for(const g of list){
+      const st=goalStatus(g);
+      html+='<div class="goal"><div class="row"><span class="gname">'+esc(g.name)+'</span><span class="pill '+st[0]+'">'+st[1]+'</span></div>';
+      if(g.kind==="pass"){
+        html+='<div class="sub"><span>期限 <span class="num">'+esc(g.deadline)+'</span></span>'+(g.note?'<span>'+esc(g.note)+'</span>':'')+'</div><div><button class="btn '+(g.done?"ghost":"")+'" data-act="pass" data-id="'+esc(g.id)+'">'+(g.done?"未達成に戻す":"合格・達成にする")+'</button></div>';
+      }else{
+        const k=goalCalc(g);
+        html+='<div class="track" role="img" aria-label="進み具合 '+Math.round(k.prog*100)+'%、ペースの目安 '+Math.round(k.exp*100)+'%"><span class="fill" style="width:'+(k.prog*100)+'%"></span><span class="pace" style="left:calc('+(k.exp*100)+'% - 1px)"></span></div>';
+        html+='<div class="sub"><span>現在 <b class="num">'+esc(g.current)+'</b> → 目標 <b class="num">'+esc(g.target)+'</b> '+esc(g.unit||"")+'</span><span>期限 <span class="num">'+esc(g.deadline)+'</span></span>'+(g.note?'<span>'+esc(g.note)+'</span>':'')+'</div>';
+        html+='<form data-id="'+esc(g.id)+'"><input type="number" step="any" inputmode="decimal" placeholder="新しい記録" aria-label="'+esc(g.name)+'の新しい記録"><button class="btn" type="submit">記録</button></form>';
+      }
+      html+='</div>';
+    }
+    html+='</section>';
+  }
+  if(store.milestones.length){
+    html+='<section class="group"><span class="eyebrow">期限つきのやること</span>';
+    for(const m of store.milestones.slice().sort((a,b)=>(a.done-b.done)||(a.due<b.due?-1:1))){
+      const over=!m.done&&m.due<TODAY;
+      html+='<div class="ms'+(m.done?" isdone":"")+'"><input type="checkbox" id="ms-'+esc(m.id)+'" data-act="ms" data-id="'+esc(m.id)+'" '+(m.done?"checked":"")+'><label for="ms-'+esc(m.id)+'">'+esc(m.name)+'</label><span class="due'+(over?" over":"")+'">'+esc(m.due)+'</span></div>';
+    }
+    html+='</section>';
+  }
+  return (html||'<div class="empty">目標が登録されていません。</div>')+'<p class="eyebrow" style="letter-spacing:0;font-weight:500">縦線はペースの目安です。バーが線より右にあれば、期限に間に合うペースです。</p>';
+}
+
+/* ---------- weekly review (rules only) ---------- */
+function analyzeWeek(ws){
+  const end=addDays(ws,6),s0=firstDay(),days=[];
+  for(let i=0;i<7;i++){const d=addDays(ws,i);if(d<=TODAY&&d>=s0)days.push(d);}
+  const rows=store.habits.filter(h=>active(h,ws)||active(h,end)).map(h=>{let full=0,min=0,run=0,maxRun=0;
+    for(const d of days){if(!active(h,d))continue;const v=check(d,h.id);if(v===2)full++;else if(v===1)min++;
+      if(h.perWeek>=7&&d<TODAY){if(v===0){run++;if(run>maxRun)maxRun=run;}else run=0;}}
+    return {h,full,min,cnt:full+min,target:h.perWeek,maxRun};});
+  return {ws,days,rows,has:days.some(d=>store.days[d]),score:weekScore(ws)};
+}
+function weekdayRates(){
+  const r=[0,1,2,3,4,5,6].map(()=>({g:0,n:0})),s0=firstDay();
+  for(let k=1;k<=28;k++){const d=addDays(TODAY,-k);if(d<s0)break;const wd=(parse(d).getDay()+6)%7;
+    for(const h of store.habits){if(h.perWeek<7||!active(h,d))continue;r[wd].n++;if(check(d,h.id)>0)r[wd].g++;}}
+  return r.map(x=>x.n?Math.round(x.g/x.n*100):null);
+}
+function suggestions(a,prev,rates,done){
+  const t=[];
+  if(!a.has){t.push(["fix","この週の記録がありません。まず一番簡単な習慣を1つ選び、最低ラインだけやる。"]);return t;}
+  for(const r of a.rows){
+    const p=prev.rows.find(x=>x.h.id===r.h.id);
+    if(done&&r.cnt<r.target*0.5&&prev.has&&p&&p.cnt<p.target*0.5) t.push(["fix","「"+r.h.name+"」は2週続けて目標の半分未満。最低ラインを「"+r.h.min+"」より軽くするか、きっかけ「"+r.h.trigger+"」を毎日必ず起きる行動に変える。"]);
+    else if(r.maxRun>=2) t.push(["fix","「"+r.h.name+"」が"+r.maxRun+"日連続で抜けた。抜けた日は最低ラインだけの日と決めておく。"]);
+    if(r.cnt>=3&&r.min/r.cnt>=0.6) t.push(["tune","「"+r.h.name+"」は最低ラインが"+r.min+"/"+r.cnt+"回。完了の基準が今の生活に対して重い可能性。基準か時間帯を見直す。"]);
+  }
+  const valid=rates.filter(x=>x!=null);
+  if(valid.length>=5){const avg=valid.reduce((s,x)=>s+x,0)/valid.length;let lo=-1;rates.forEach((x,i)=>{if(x!=null&&(lo<0||x<rates[lo]))lo=i;});
+    if(lo>=0&&rates[lo]<60&&avg-rates[lo]>=20) t.push(["tune",WDM[lo]+"曜日の達成率が"+rates[lo]+"%で、平均より"+Math.round(avg-rates[lo])+"ポイント低い。この曜日は予定を減らすか、最低ラインの日と決める。"]);}
+  for(const g of store.goals){if(g.kind!=="pass"&&goalStatus(g)[0]==="late") t.push(["tune","「"+g.name+"」がペースより遅れ（現在 "+g.current+" → 目標 "+g.target+" "+(g.unit||"")+"）。週の練習量か期限を見直す。"]);}
+  const over=store.milestones.filter(m=>!m.done&&m.due<TODAY);
+  if(over.length) t.push(["fix","期限切れのやること："+over.map(m=>m.name).join("、")+"。今週中に終わらせるか、期限を引き直す。"]);
+  const soon=store.milestones.filter(m=>!m.done&&m.due>=TODAY&&m.due<=addDays(TODAY,7));
+  if(soon.length) t.push(["tune","7日以内が期限："+soon.map(m=>m.name+"（"+m.due.slice(5).replace("-","/")+"）").join("、")]);
+  if(!t.length||(a.score>=85&&t.every(x=>x[0]!=="fix"))) t.push(["keep","達成率"+a.score+"%。仕組みが回っている。このまま維持し、余裕がある習慣は完了の基準を一段上げる。"]);
+  return t;
+}
+function renderReview(){
+  const off=ui.revOff, ws=addDays(weekStart(TODAY),-7*off), a=analyzeWeek(ws), prev=analyzeWeek(addDays(ws,-7));
+  const done=off>0||parse(TODAY).getDay()===0, rates=weekdayRates(), tips=suggestions(a,prev,rates,done);
+  const hit=a.rows.filter(r=>r.cnt>=r.target).length, diff=a.score-prev.score;
+  let html='<div class="toggle" role="group" aria-label="対象の週"><button data-act="rev" data-off="0" aria-pressed="'+(off===0)+'">今週</button><button data-act="rev" data-off="1" aria-pressed="'+(off===1)+'">先週</button></div>';
+  html+='<h2>'+label(ws)+' 〜 '+label(addDays(ws,6))+(done?'':' <span class="eyebrow">集計中</span>')+'</h2>';
+  html+='<div class="stats"><div class="stat"><span class="v num">'+a.score+'%</span><span class="l">達成率</span></div><div class="stat"><span class="v num">'+(prev.has?(diff>=0?"+":"")+diff:"－")+'</span><span class="l">前週との差（pt）</span></div><div class="stat"><span class="v num">'+hit+'/'+a.rows.length+'</span><span class="l">回数目標を満たした習慣</span></div></div>';
+  html+='<section class="group"><span class="eyebrow">仕組みの調整案（記録から自動で判定）</span><ul class="tips">'+tips.map(x=>'<li><span class="k '+x[0]+'">'+({fix:"要修正",tune:"調整",keep:"維持"}[x[0]])+'</span><span>'+esc(x[1])+'</span></li>').join("")+'</ul></section>';
+  html+='<section class="group"><span class="eyebrow">習慣ごとの回数</span><div class="panel">';
+  for(const c of CAT_ORDER){for(const r of a.rows.filter(x=>x.h.cat===c)){
+    const pill=r.cnt>=r.target?'<span class="pill ok">達成</span>':!done?'<span class="pill wait">あと'+(r.target-r.cnt)+'回</span>':'<span class="pill late">未達</span>';
+    html+='<div class="hrow"><span class="n">'+esc(r.h.name)+'</span><span class="c">'+r.cnt+'/'+r.target+'（完了'+r.full+'・最低'+r.min+'）</span>'+pill+'</div>';
+  }}
+  html+='</div></section><section class="group"><span class="eyebrow">曜日ごとの達成率（毎日の習慣・直近4週）</span><div class="wdays">'+rates.map((x,i)=>'<div class="w"><div class="bar" role="img" aria-label="'+WDM[i]+'曜日 '+(x==null?"記録なし":x+"%")+'"><i class="'+(x!=null&&x<60?"low":"")+'" style="height:'+(x||0)+'%"></i></div><em>'+WDM[i]+'</em><em>'+(x==null?"－":x+"%")+'</em></div>').join("")+'</div></section>';
+  return html;
+}
+
+/* ---------- settings: backup / restore ---------- */
+function renderSettings(){
+  const b=store.meta&&store.meta.lastBackup, days=Object.keys(store.days).length;
+  let h='<div class="card"><h2>バックアップ</h2><p>記録はこのスマホの中だけにあります。機種変更・ブラウザのデータ削除・アプリの削除で消えるので、週1回は書き出して、ファイルアプリやクラウドに保存してください。</p>'+
+    '<p>最後のバックアップ：<span class="num">'+(b?esc(b.slice(0,10)):"まだありません")+'</span>　記録した日数：<span class="num">'+days+'</span></p>'+
+    '<div class="acts"><button class="btn" data-act="export">ファイルに書き出す</button><button class="btn ghost" data-act="copy">テキストでコピー</button></div></div>';
+  h+=importCard("読み込み・復元","計画ファイルを読み込むと、習慣・目標・期限つきのやることが更新されます（毎日の記録と目標の進み具合はそのまま）。バックアップファイルを読み込むと、すべてがその時点の内容に置き換わります。");
+  h+='<div class="card"><h2>すべてのデータを消す</h2><p>このスマホに保存された計画と記録をすべて消します。元に戻せないので、先にバックアップしてください。</p><div class="acts">'+
+    (ui.confirmWipe?'<button class="btn danger" data-act="wipe-yes">本当に消す</button><button class="btn ghost" data-act="wipe-no">やめる</button>':'<button class="btn ghost" data-act="wipe">データを消す</button>')+'</div></div>';
+  return h;
+}
+function backupJSON(){return JSON.stringify(Object.assign({app:"allrounder",kind:"backup",version:1,exportedAt:new Date().toISOString()},store));}
+function markBackup(){store.meta=Object.assign({},store.meta,{lastBackup:new Date().toISOString()});save();}
+async function doExport(){
+  const name="allrounder-backup-"+TODAY+".json", text=backupJSON();
+  try{
+    const file=new File([text],name,{type:"application/json"});
+    if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});markBackup();flash("バックアップを書き出しました。","ok");return;}
+  }catch(e){if(e&&e.name==="AbortError")return;}
+  try{const url=URL.createObjectURL(new Blob([text],{type:"application/json"}));const a=document.createElement("a");a.href=url;a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(url);a.remove();},1500);markBackup();flash("バックアップを書き出しました（ダウンロードフォルダを確認）。","ok");}
+  catch(e){flash("書き出せませんでした。「テキストでコピー」を使ってください。","err");}
+}
+async function doCopy(){
+  const text=backupJSON();
+  try{await navigator.clipboard.writeText(text);markBackup();flash("コピーしました。メモアプリなどに貼り付けて保存してください。","ok");}
+  catch(e){flash("コピーできませんでした。","err");}
+}
+function flash(m,t){ui.msg=m;ui.msgType=t||"";if(ui.tab!=="settings"&&store)ui.tab="settings";render();}
+
+function validPlan(o){return o&&Array.isArray(o.habits)&&o.habits.every(h=>h&&h.id&&h.name&&typeof h.perWeek==="number");}
+function handleImportText(text){
+  let o;try{o=JSON.parse(text);}catch(e){flash("ファイルの中身を読み取れませんでした。計画ファイルかバックアップファイルを選んでください。","err");return;}
+  if(!validPlan(o)){flash("習慣のリストが見つかりませんでした。計画ファイルかバックアップファイルを選んでください。","err");return;}
+  const goals=Array.isArray(o.goals)?o.goals:[], ms=Array.isArray(o.milestones)?o.milestones:[];
+  if(o.days&&typeof o.days==="object"){
+    const n=Object.keys(o.days).length;
+    if(!store){applyBackup(o);return;}
+    ui.pending={type:"backup",data:o,summary:"バックアップ（記録"+n+"日分、"+(o.exportedAt?o.exportedAt.slice(0,10):"日付不明")+"時点）で、今のデータをすべて置き換えます。"};
+    ui.msg="";render();return;
+  }
+  applyPlan(o.habits,goals,ms);
+}
+function applyBackup(o){
+  store={habits:o.habits,goals:o.goals||[],milestones:o.milestones||[],days:o.days||{},meta:Object.assign({},o.meta||{},{restoredAt:new Date().toISOString()})};
+  save();askPersist();ui.pending=null;ui.tab="today";ui.msg="";render();
+}
+function applyPlan(habits,goals,ms){
+  const fresh=!store;
+  if(fresh) store={habits:[],goals:[],milestones:[],days:{},meta:{created:new Date().toISOString()}};
+  const oldG={};store.goals.forEach(g=>oldG[g.id]=g);
+  const oldM={};store.milestones.forEach(m=>oldM[m.id]=m);
+  store.habits=habits;
+  store.goals=goals.map(g=>{const o=oldG[g.id];if(!o)return g;const n=Object.assign({},g);if(g.kind==="pass")n.done=!!o.done;else{n.current=o.current;n.history=o.history||[];}return n;});
+  store.milestones=ms.map(m=>oldM[m.id]?Object.assign({},m,{done:!!oldM[m.id].done}):m);
+  save();askPersist();ui.pending=null;
+  if(fresh){ui.tab="today";ui.msg="";render();}
+  else flash("計画を更新しました（記録と進み具合はそのままです）。","ok");
+}
+
+/* ---------- events ---------- */
+document.getElementById("tabs").addEventListener("click",e=>{const b=e.target.closest("button[data-tab]");if(!b)return;ui.tab=b.dataset.tab;ui.msg="";ui.pending=null;ui.confirmWipe=false;if(ui.tab==="today")ui.date=TODAY;render();window.scrollTo(0,0);});
+view.addEventListener("click",e=>{
+  const b=e.target.closest("[data-act]");if(!b)return;const a=b.dataset.act;
+  if(a==="prev"){ui.date=addDays(ui.date,-1);render();}
+  else if(a==="next"){ui.date=addDays(ui.date,1);render();}
+  else if(a==="set"){setCheck(b.dataset.id,Number(b.dataset.v));}
+  else if(a==="pass"){const g=store.goals.find(x=>x.id===b.dataset.id);if(g){g.done=!g.done;save();render();}}
+  else if(a==="ms"){const m=store.milestones.find(x=>x.id===b.dataset.id);if(m){m.done=b.checked;save();render();}}
+  else if(a==="rev"){ui.revOff=Number(b.dataset.off);render();}
+  else if(a==="export"){doExport();}
+  else if(a==="copy"){doCopy();}
+  else if(a==="import-text"){const t=document.getElementById("import-text");if(t&&t.value.trim())handleImportText(t.value);else flash("貼り付け欄が空です。","err");}
+  else if(a==="import-confirm"){if(ui.pending)applyBackup(ui.pending.data);}
+  else if(a==="import-cancel"){ui.pending=null;render();}
+  else if(a==="wipe"){ui.confirmWipe=true;render();}
+  else if(a==="wipe-no"){ui.confirmWipe=false;render();}
+  else if(a==="wipe-yes"){try{localStorage.removeItem(KEY);}catch(e){}store=null;ui.confirmWipe=false;ui.tab="today";ui.msg="";render();}
+});
+view.addEventListener("change",e=>{
+  if(e.target.id==="import-file"){const f=e.target.files&&e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>handleImportText(String(r.result));r.onerror=()=>flash("ファイルを読み込めませんでした。","err");r.readAsText(f);}
+  else if(e.target.id==="day-note"){setNote(e.target.value);}
+});
+let noteTimer=null;
+view.addEventListener("input",e=>{if(e.target.id!=="day-note")return;clearTimeout(noteTimer);const t=e.target.value;noteTimer=setTimeout(()=>setNote(t),600);});
+view.addEventListener("submit",e=>{
+  e.preventDefault();const f=e.target.closest("form[data-id]");if(!f)return;
+  const inp=f.querySelector("input"),v=Number(inp.value);if(inp.value===""||!isFinite(v))return;
+  const g=store.goals.find(x=>x.id===f.dataset.id);if(!g)return;
+  g.current=v;g.history=(g.history||[]).concat([{d:TODAY,v}]);save();render();
+});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){const t=ymd(new Date());if(t!==TODAY){if(ui.date===TODAY)ui.date=t;render();}}});
+
+render();
+if("serviceWorker" in navigator&&location.protocol!=="file:"){window.addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{});});}
+})();
+</script>
+</body>
+</html>
